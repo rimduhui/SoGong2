@@ -7,7 +7,7 @@ public class Robot
 	
 	private int lastMove = FRONT;
 	
-	private static int TICK = 70;	
+	private static int TICK = 30;	
 	
 	private FloorSensor mFloorSensorFront;
 	private FloorSensor mFloorSensorBack;
@@ -59,13 +59,13 @@ public class Robot
 		{
 			mMotor.goForward();
 			lastMove = FRONT;
-			sleep(200);
+			sleep(300);
 		}
 		else if(!mFloorSensorFront.isInArena() && mFloorSensorBack.isInArena())
 		{
 			mMotor.goBackward();
 			lastMove = BACK;
-			sleep(200);
+			sleep(300);
 		}
 		else
 		{
