@@ -6,6 +6,6 @@
 - Last Updated : 2016/11/30
 - Directory description
 
-  /Documents : including diagrams (usecase, static, dynamic, task structuring)
+  /Documents : including .ppt file, diagrams (usecase, static, dynamic, task structuring)
   
   /SogongE : including program sources
