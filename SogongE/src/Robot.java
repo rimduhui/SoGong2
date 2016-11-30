@@ -5,15 +5,26 @@ public class Robot
 	private static int FRONT = 0;
 	private static int BACK = 1;
 	
-	private int lastMove = FRONT;
+	private static int TICK = 30;
+	private static int OUT_LIMIT = 2000;
 	
-	private static int TICK = 30;	
+	private boolean mIsEntirelyOut = false;
+	private long mOutTime;
+	
+	private boolean mNoDelay = false;
+	private int mLastMove = FRONT;
+	private long mTraceRotationDelay = System.currentTimeMillis();	
 	
 	private FloorSensor mFloorSensorFront;
 	private FloorSensor mFloorSensorBack;
 	private SonarSensor mSonarSensorFront;
 	private SonarSensor mSonarSensorBack;
 	private Wheel mMotor;
+	
+	private long random(long a, long b)
+	{
+		return (long)(Math.random() * (b - a)) + a;
+	}
 	
 	public boolean sleep(long timeMillis)
 	{
@@ -39,16 +50,20 @@ public class Robot
 	
 	public void pushFrontEnemy()
 	{
+		mIsEntirelyOut = false;
+		
 		LCDMgr.setText("Pushing Front");
 		mMotor.goForward();
-		lastMove = BACK;
+		mLastMove = BACK;
 	}
 	
 	public void pushBackEnemy()
 	{
+		mIsEntirelyOut = false;
+		
 		LCDMgr.setText("Pushing Back");
 		mMotor.goBackward();
-		lastMove = FRONT;
+		mLastMove = FRONT;
 	}
 	
 	public void returnToArena()
@@ -57,19 +72,35 @@ public class Robot
 		
 		if(mFloorSensorFront.isInArena() && !mFloorSensorBack.isInArena())
 		{
+			mIsEntirelyOut = false;
 			mMotor.goForward();
-			lastMove = FRONT;
+			mLastMove = FRONT;
 			sleep(300);
 		}
 		else if(!mFloorSensorFront.isInArena() && mFloorSensorBack.isInArena())
 		{
+			mIsEntirelyOut = false;
 			mMotor.goBackward();
-			lastMove = BACK;
+			mLastMove = BACK;
 			sleep(300);
 		}
 		else
 		{
-			if(lastMove == FRONT) mMotor.goBackward();
+			if(mIsEntirelyOut)
+			{
+				if(mOutTime + OUT_LIMIT < System.currentTimeMillis())
+				{
+					traceEnemy();
+					return;
+				}
+			}
+			else
+			{
+				mIsEntirelyOut = true;
+				mOutTime = System.currentTimeMillis();
+			}
+			
+			if(mLastMove == FRONT) mMotor.goBackward();
 			else mMotor.goForward();
 		}
 	}
@@ -80,16 +111,24 @@ public class Robot
 		mMotor.rotateLeft();
 		sleep(300);
 		mMotor.goLeftward();
-		lastMove = FRONT;
+		mLastMove = FRONT;
 	}
 	
 	public void traceEnemy()
 	{
 		LCDMgr.setText("Tracing");
-		mMotor.rotateRight();
-		sleep(300);
-		mMotor.goRightward();
-		lastMove = FRONT;
+		
+		if(mTraceRotationDelay < System.currentTimeMillis())
+		{
+			mMotor.rotateRight();
+			sleep(random(10, 150));
+		}
+		
+		mMotor.goForward();
+		mLastMove = FRONT;
+		mTraceRotationDelay = System.currentTimeMillis() + random(10, 100);
+		
+		mNoDelay = true;
 	}
 	
 	public boolean isInArena()
@@ -101,25 +140,35 @@ public class Robot
 	{
 		LCDMgr.setText("Attack");
 		init();
-		
+				
 		while(true)
 		{
+			mNoDelay = false;
+			
 			if(mSonarSensorFront.isFaced())
-			{
+			{	
+				mIsEntirelyOut = false;
+				
 				if(!isInArena()) mMotor.stop();
 				else pushFrontEnemy();
 			}
 			else if(mSonarSensorBack.isFaced())
 			{
+				mIsEntirelyOut = false;
+				
 				if(!isInArena()) mMotor.stop();
 				else pushBackEnemy();
 			}
 			else if(!isInArena()) returnToArena();
 			else if(mSonarSensorFront.isDetected()) pushFrontEnemy();
 			else if(mSonarSensorBack.isDetected()) pushBackEnemy();
-			else traceEnemy();
+			else
+			{
+				mIsEntirelyOut = false;
+				traceEnemy();
+			}
 			
-			if(!sleep(TICK)) break;
+			if(!mNoDelay && !sleep(TICK)) break;
 			int id = Button.readButtons();
 			if(id == Button.ID_ENTER) break;
 		}
@@ -134,12 +183,18 @@ public class Robot
 		
 		while(true)
 		{
+			mNoDelay = false;
+			
 			if(!isInArena()) returnToArena();
 			else if(mSonarSensorFront.isDetected()) pushFrontEnemy();
 			else if(mSonarSensorBack.isDetected()) pushBackEnemy();
-			else avoidEnemy();
+			else
+			{
+				mIsEntirelyOut = false;
+				avoidEnemy();
+			}
 			
-			if(!sleep(TICK)) break;
+			if(!mNoDelay && !sleep(TICK)) break;
 			int id = Button.readButtons();
 			if(id == Button.ID_ENTER) break;
 		}
